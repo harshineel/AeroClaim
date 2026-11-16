@@ -1,0 +1,7 @@
+# secrets and local config - commit only the *.example files
+.env
+secrets/*.env
+node_modules/
+dist/
+target/
+*.log

@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+html { font-size: 15px; }
+body {
+  @apply bg-ink-900 text-snow font-sans antialiased;
+  background-image:
+    radial-gradient(1200px 500px at 85% -10%, rgba(108,182,255,.10), transparent 60%),
+    radial-gradient(900px 400px at -10% 0%, rgba(255,178,36,.06), transparent 55%);
+  background-attachment: fixed;
+}
+:focus-visible { outline: 2px solid #FFB224; outline-offset: 2px; border-radius: 6px; }
+::selection { background: rgba(255,178,36,.35); }
+
+@layer components {
+  .panel { @apply rounded-xl border border-ink-600/70 bg-ink-800/80 backdrop-blur-sm; }
+  .panel-pad { @apply p-5; }
+  .field { @apply w-full rounded-lg border border-ink-600 bg-ink-900 px-3 py-2.5 text-snow placeholder:text-mist/60 transition-colors focus:border-board focus:outline-none; }
+  .field-error { @apply border-stop/80; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-bold transition active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45; }
+  .btn-primary { @apply btn bg-board text-ink-950 hover:brightness-110; }
+  .btn-ghost { @apply btn border border-ink-600 text-snow hover:border-mist/70 hover:bg-ink-700/60; }
+  .btn-danger { @apply btn border border-stop/60 text-stop hover:bg-stop/10; }
+  .label { @apply mb-1.5 block text-sm text-mist; }
+  .help-error { @apply mt-1 text-sm text-stop; }
+}
+
+/* split-flap board */
+.flap {
+  display: inline-flex; align-items: center; justify-content: center; width: 1.05em; height: 1.5em; margin-right: 2px;
+  font-family: 'B612 Mono', ui-monospace, monospace; font-weight: 700; line-height: 1; color: #FFB224;
+  background: linear-gradient(180deg, #0a1020 0 49%, #060b17 50% 100%); border-radius: 4px; position: relative;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.flap::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0,0,0,.65); }
+.flap.flipping { animation: flapjitter .09s linear infinite; }
+.flap.ok { color: #3DDC97; } .flap.bad { color: #FF6B6B; } .flap.dim { color: #8A9AC2; }
+@keyframes flapjitter { 0% { transform: scaleY(1); } 50% { transform: scaleY(.88); } 100% { transform: scaleY(1); } }
+
+/* live BPMN diagram: light "paper" panel, markers driven by engine state */
+.bpmn-paper { background: #F4F7FD; border-radius: 12px; }
+.bpmn-paper .bjs-powered-by { display: none; }
+.bpmn-paper .djs-element.done .djs-visual > :is(rect, circle, polygon) { fill: #D3F4E3 !important; stroke: #12A05F !important; stroke-width: 2.5px !important; }
+.bpmn-paper .djs-element.active .djs-visual > :is(rect, circle, polygon) { fill: #FFE3A3 !important; stroke: #E08A00 !important; stroke-width: 3.5px !important; animation: bpmnpulse 1.4s ease-in-out infinite; }
+.bpmn-paper .djs-element.incident .djs-visual > :is(rect, circle, polygon) { fill: #FFD3D3 !important; stroke: #D62F2F !important; stroke-width: 3.5px !important; }
+.bpmn-paper .djs-element.terminated .djs-visual > :is(rect, circle, polygon) { fill: #E6E9F2 !important; stroke: #9AA3BD !important; }
+@keyframes bpmnpulse { 0%,100% { stroke-opacity: 1; } 50% { stroke-opacity: .35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .flap.flipping, .bpmn-paper .djs-element.active .djs-visual > * { animation: none !important; }
+  * { scroll-behavior: auto !important; }
+}

@@ -1,0 +1,144 @@
+# AeroClaim - Parametric Travel & Flight Delay Claims
+# One command starts the whole solution:   docker compose up --build
+#
+#   React UI ............. http://localhost:3000
+#   Spring Boot API ...... http://localhost:8081/api/scenarios
+#   Camunda Operate ...... http://localhost:8080/operate    (demo / demo)
+#   Camunda Tasklist ..... http://localhost:8080/tasklist   (demo / demo)
+#   Mailpit (e-mails) .... http://localhost:8025
+#
+# Camunda part follows the official 8.9 lightweight compose (Zeebe + Operate + Tasklist in one container, plus connectors).
+services:
+  camunda-data-init:
+    image: camunda/camunda:${CAMUNDA_VERSION}
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c", "chown -R 1001:1001 /usr/local/camunda/camunda-data && chmod 775 /usr/local/camunda/camunda-data"]
+    volumes:
+      - camunda-data:/usr/local/camunda/camunda-data
+    restart: "no"
+
+  orchestration:
+    image: camunda/camunda:${CAMUNDA_VERSION}
+    container_name: aeroclaim-orchestration
+    ports:
+      - "8080:8080"     # REST API v2, Operate, Tasklist
+      - "26500:26500"   # Zeebe gRPC
+      - "9600:9600"     # management / health
+    mem_limit: 1g
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9600 && echo -e \"GET /actuator/health/status HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && head -n 1 <&3'"]
+      interval: 5s
+      retries: 40
+      start_period: 30s
+    volumes:
+      - camunda:/usr/local/camunda/data
+      - camunda-data:/usr/local/camunda/camunda-data
+    configs:
+      - source: orchestration-config
+        target: /usr/local/camunda/config/application.yaml
+    networks: [aeroclaim]
+    depends_on:
+      camunda-data-init:
+        condition: service_completed_successfully
+
+  # Executes the REST and Email connectors used by the BPMN models. Secrets are read from the environment
+  # (secrets/connector-secrets.env) and referenced in BPMN as {{secrets.NAME}}.
+  connectors:
+    image: camunda/connectors-bundle:${CAMUNDA_CONNECTORS_VERSION}
+    container_name: aeroclaim-connectors
+    env_file:
+      - secrets/connector-secrets.env
+    mem_limit: 512m
+    restart: on-failure
+    configs:
+      - source: connectors-config
+        target: application.yaml
+    networks: [aeroclaim]
+    depends_on:
+      orchestration:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: aeroclaim-postgres
+    environment:
+      POSTGRES_DB: ${APP_DB_NAME}
+      POSTGRES_USER: ${APP_DB_USER}
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USER} -d ${APP_DB_NAME}"]
+      interval: 5s
+      retries: 20
+    networks: [aeroclaim]
+
+  mailpit:
+    image: axllent/mailpit:${MAILPIT_VERSION}
+    container_name: aeroclaim-mailpit
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "8025:8025"
+    networks: [aeroclaim]
+
+  backend:
+    build:
+      context: .                      # repo root: the jar bundles ../bpmn-models
+      dockerfile: backend-springboot/Dockerfile
+    container_name: aeroclaim-backend
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${APP_DB_NAME}
+      DB_USER: ${APP_DB_USER}
+      DB_PASSWORD: ${APP_DB_PASSWORD}
+      CAMUNDA_GRPC_ADDRESS: http://orchestration:26500
+      CAMUNDA_REST_ADDRESS: http://orchestration:8080
+      FLIGHT_API_KEY: ${FLIGHT_API_KEY}
+      PAYMENT_API_KEY: ${PAYMENT_API_KEY}
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8081:8081"
+    restart: on-failure
+    networks: [aeroclaim]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      orchestration:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend-react
+    container_name: aeroclaim-frontend
+    ports:
+      - "3000:80"
+    networks: [aeroclaim]
+    depends_on:
+      - backend
+
+volumes:
+  camunda:
+  camunda-data:
+  pgdata:
+
+networks:
+  aeroclaim:
+    name: aeroclaim
+
+configs:
+  orchestration-config:
+    file: ./docker/camunda/application.yaml
+  connectors-config:
+    content: |
+      camunda:
+        client:
+          mode: self-managed
+          grpc-address: http://orchestration:26500
+          rest-address: http://orchestration:8080
+      management:
+        endpoints:
+          web:
+            exposure:
+              include: health

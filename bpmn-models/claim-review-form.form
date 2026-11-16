@@ -1,0 +1,51 @@
+{
+  "components": [
+    {
+      "text": "# Parametric claim review\nThe flight data was verified automatically. Review the assessment and the fraud score before approving the payout.",
+      "type": "text",
+      "layout": {
+        "row": "Row_1",
+        "columns": null
+      },
+      "id": "Field_t1"
+    },
+    {
+      "label": "Decision",
+      "type": "radio",
+      "layout": {
+        "row": "Row_2",
+        "columns": null
+      },
+      "id": "Field_r2",
+      "key": "decision",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Approve payout",
+          "value": "APPROVE"
+        },
+        {
+          "label": "Reject claim",
+          "value": "REJECT"
+        }
+      ]
+    },
+    {
+      "label": "Reviewer comment",
+      "type": "textarea",
+      "layout": {
+        "row": "Row_3",
+        "columns": null
+      },
+      "id": "Field_a3",
+      "key": "comment"
+    }
+  ],
+  "type": "default",
+  "id": "claim-review-form",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.9.0",
+  "schemaVersion": 16
+}

@@ -1,0 +1,55 @@
+{
+  "components": [
+    {
+      "text": "# Resolve failed payment\nThe automated bank transfer was declined. Choose how finance resolved it.",
+      "type": "text",
+      "layout": {
+        "row": "Row_1",
+        "columns": null
+      },
+      "id": "Field_t1"
+    },
+    {
+      "label": "Resolution",
+      "type": "radio",
+      "layout": {
+        "row": "Row_2",
+        "columns": null
+      },
+      "id": "Field_r2",
+      "key": "resolution",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Paid manually",
+          "value": "PAID_MANUALLY"
+        },
+        {
+          "label": "Beneficiary details corrected",
+          "value": "DETAILS_CORRECTED"
+        },
+        {
+          "label": "Written off",
+          "value": "WRITTEN_OFF"
+        }
+      ]
+    },
+    {
+      "label": "Finance comment",
+      "type": "textarea",
+      "layout": {
+        "row": "Row_3",
+        "columns": null
+      },
+      "id": "Field_a3",
+      "key": "comment"
+    }
+  ],
+  "type": "default",
+  "id": "payment-resolution-form",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.9.0",
+  "schemaVersion": 16
+}
